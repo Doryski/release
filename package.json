@@ -1,6 +1,6 @@
 {
   "name": "@doryski/release",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A conventional-commit release CLI and reusable GitHub Actions workflow for npm packages",
   "type": "module",
   "main": "./dist/index.js",
