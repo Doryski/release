@@ -113,6 +113,15 @@ const withLinkRef = (tail: string, version: string) => {
   return [...lines.slice(0, at), ref, ...lines.slice(at)].join("\n");
 };
 
+const UNRELEASED_REF_RE =
+  /^(\[Unreleased\]:\s*\S*\/compare\/)v\d+\.\d+\.\d+(\.{3}HEAD)\s*$/i;
+
+const withUnreleasedRef = (tail: string, version: string) =>
+  tail
+    .split("\n")
+    .map((line) => line.replace(UNRELEASED_REF_RE, `$1v${version}$2`))
+    .join("\n");
+
 export type BuildChangelogInput = {
   content: string;
   version: string;
@@ -139,7 +148,7 @@ export const buildChangelog = ({
     head.trimEnd(),
     unreleasedHeading,
     `## [${released}] - ${date}\n\n${body}`,
-    withLinkRef(tail.trim(), released),
+    withUnreleasedRef(withLinkRef(tail.trim(), released), released),
   ].filter((block): block is string => Boolean(block));
 
   return `${blocks.join("\n\n")}\n`;

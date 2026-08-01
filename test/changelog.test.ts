@@ -110,6 +110,23 @@ describe("buildChangelog", () => {
     );
   });
 
+  it("repoints the Unreleased compare ref at the new version", () => {
+    const content = DOC.replace(
+      "[0.1.0]: https://example.com/releases/tag/v0.1.0",
+      "[Unreleased]: https://example.com/compare/v0.1.0...HEAD\n[0.1.0]: https://example.com/releases/tag/v0.1.0",
+    );
+
+    const out = buildChangelog({
+      content,
+      version: "0.2.0",
+      date: "2026-08-01",
+      commits: ["feat: add users command"],
+    });
+
+    expect(out).toContain("[Unreleased]: https://example.com/compare/v0.2.0...HEAD");
+    expect(out).not.toContain("compare/v0.1.0...HEAD");
+  });
+
   it("adds no link ref when the document keeps none", () => {
     const out = buildChangelog({
       content: DOC.replace("\n[0.1.0]: https://example.com/releases/tag/v0.1.0\n", ""),

@@ -71,6 +71,10 @@ Section content comes from one of two places:
   → `### Breaking Changes`. Scopes render as a bold prefix. Non-user-facing
   types (`chore`, `docs`, `test`, `ci`, `build`, `style`, `release`) are dropped.
 
+Link references are maintained only where the document already uses them: a
+`[X.Y.Z]: …/releases/tag/vX.Y.Z` entry is added for the new version, and an
+`[Unreleased]: …/compare/vX.Y.Z...HEAD` entry is repointed at it.
+
 When neither source yields anything, `CHANGELOG.md` is left untouched.
 
 ## Programmatic use
