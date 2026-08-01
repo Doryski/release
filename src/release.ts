@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
@@ -9,6 +10,7 @@ import {
   getRecentTags,
   getRemoteActionsUrl,
 } from "./git.js";
+import { updateChangelogFile } from "./changelog.js";
 import { readJson, updateVersionFile } from "./pkg.js";
 import {
   applyBump,
@@ -23,9 +25,11 @@ export type ReleaseOptions = {
   bump?: BumpType;
   yes?: boolean;
   dryRun?: boolean;
+  changelog?: boolean;
 };
 
 const PACKAGE_JSON = path.join(process.cwd(), "package.json");
+const CHANGELOG_MD = path.join(process.cwd(), "CHANGELOG.md");
 
 const makeRunStep =
   (dryRun: boolean) => (label: string, cmd: string, args: string[]) => {
@@ -44,6 +48,7 @@ export const release = async (options: ReleaseOptions = {}) => {
     bump: options.bump,
     yes: options.yes ?? false,
     dryRun: options.dryRun ?? false,
+    changelog: options.changelog ?? true,
   };
 
   ensureCleanTree();
@@ -124,11 +129,20 @@ export const release = async (options: ReleaseOptions = {}) => {
     process.exit(1);
   }
 
+  const writesChangelog = flags.changelog && existsSync(CHANGELOG_MD);
+
   console.log(`\nThis will:`);
   console.log(`  1. Bump package.json   ${pkg.version}  →  ${bareVersion}`);
-  console.log(`  2. Commit on ${branch}`);
-  console.log(`  3. Tag ${normalized} and push ${branch} + tag`);
-  console.log(`  4. GitHub Actions will build, test, and publish to npm\n`);
+  if (writesChangelog) {
+    console.log(`  2. Cut CHANGELOG.md section [${bareVersion}]`);
+  }
+  console.log(`  ${writesChangelog ? 3 : 2}. Commit on ${branch}`);
+  console.log(
+    `  ${writesChangelog ? 4 : 3}. Tag ${normalized} and push ${branch} + tag`,
+  );
+  console.log(
+    `  ${writesChangelog ? 5 : 4}. GitHub Actions will build, test, and publish to npm\n`,
+  );
 
   if (flags.dryRun) console.log("Dry-run mode: no changes will be made.\n");
 
@@ -144,12 +158,27 @@ export const release = async (options: ReleaseOptions = {}) => {
 
   if (flags.dryRun) {
     console.log(`→ [dry-run] would bump package.json to ${bareVersion}`);
+    if (writesChangelog) {
+      console.log(`→ [dry-run] would cut CHANGELOG.md section [${bareVersion}]`);
+    }
   } else {
     const pkgChanged = await updateVersionFile(PACKAGE_JSON, bareVersion);
-    if (!pkgChanged) {
-      console.warn("\n⚠ package.json already at target version.");
-    } else {
-      runStep(`git add package.json`, "git", ["add", "package.json"]);
+    if (!pkgChanged) console.warn("\n⚠ package.json already at target version.");
+
+    const changelogChanged =
+      writesChangelog &&
+      (await updateChangelogFile(CHANGELOG_MD, normalized, commitsSinceTag));
+    if (writesChangelog && !changelogChanged) {
+      console.warn("⚠ No changelog entries to cut; leaving CHANGELOG.md alone.");
+    }
+
+    const staged = [
+      pkgChanged ? "package.json" : null,
+      changelogChanged ? "CHANGELOG.md" : null,
+    ].filter((file): file is string => file !== null);
+
+    if (staged.length) {
+      runStep(`git add ${staged.join(" ")}`, "git", ["add", ...staged]);
       runStep(`git commit -m "release: ${normalized}"`, "git", [
         "commit",
         "-m",

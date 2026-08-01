@@ -37,6 +37,7 @@ pnpm release
 | `-r, --release-version <ver>` | Exact release version (`0.2.0` or `v0.2.0`). Highest precedence. |
 | `--bump <major\|minor\|patch>` | Force the bump level. Overrides the auto-detected level; ignored when `--release-version` is set. |
 | `-y, --yes` | Skip the confirmation prompt (required for non-interactive runs). |
+| `--no-changelog` | Skip cutting a `CHANGELOG.md` section for this release. |
 | `-n, --dry-run` | Preview actions without modifying files, committing, tagging, or pushing. |
 | `-h, --help` | Show help. |
 
@@ -47,6 +48,30 @@ The auto-detected bump follows conventional commits since the latest tag:
 - a `!`-marked type (e.g. `feat!:`) or a `BREAKING CHANGE:` footer → **major**
 - any `feat:` → **minor**
 - everything else (`fix`, `chore`, `docs`, …) → **patch**
+
+## Changelog
+
+If the repo has a `CHANGELOG.md`, the CLI cuts a dated section for the release
+and includes it in the `release: vX.Y.Z` commit, so the file can never drift
+behind the tags. Repos without the file are unaffected; `--no-changelog` opts
+out.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/): the new
+section goes directly below `## [Unreleased]`, which is left in place, empty and
+ready for the next cycle.
+
+Section content comes from one of two places:
+
+- **Hand-written notes win.** Anything under `## [Unreleased]` is promoted
+  verbatim into the new version section. Write prose there as you go and the
+  release just files it under the right version.
+- **Otherwise it is generated** from the conventional commits since the last
+  tag: `feat` → `### Added`, `fix` → `### Fixed`, `perf`/`refactor`/`revert` →
+  `### Changed`, and anything marked `!` or carrying a `BREAKING CHANGE:` footer
+  → `### Breaking Changes`. Scopes render as a bold prefix. Non-user-facing
+  types (`chore`, `docs`, `test`, `ci`, `build`, `style`, `release`) are dropped.
+
+When neither source yields anything, `CHANGELOG.md` is left untouched.
 
 ## Programmatic use
 

@@ -28,6 +28,10 @@ const program = new Command()
   )
   .option("-y, --yes", "skip the confirmation prompt", false)
   .option(
+    "--no-changelog",
+    "skip cutting a CHANGELOG.md section for this release",
+  )
+  .option(
     "-n, --dry-run",
     "preview the actions without modifying files, committing, tagging, or pushing",
     false,
@@ -39,6 +43,7 @@ type CliFlags = {
   bump?: BumpType;
   yes: boolean;
   dryRun: boolean;
+  changelog: boolean;
 };
 
 program.parse();
@@ -49,6 +54,7 @@ release({
   bump: flags.bump,
   yes: flags.yes,
   dryRun: flags.dryRun,
+  changelog: flags.changelog,
 }).catch((err) => {
   console.error(err);
   process.exit(1);
