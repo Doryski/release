@@ -66,7 +66,9 @@ jobs:
           fi
 
       - name: Pack
-        run: npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/package"
+        run: |
+          mkdir -p "$RUNNER_TEMP/package"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/package"
 
       - uses: actions/upload-artifact@v4
         with:
