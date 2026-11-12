@@ -118,9 +118,16 @@ Workflow inputs:
 | `node-version` | string | `"20"` | Node version for setup-node. |
 | `run-lint` | boolean | `true` | Whether to run `pnpm lint`. |
 
-The workflow runs `install → build → lint (gated) → type-check → test`, verifies
-`package.json` matches the tag, publishes with `npm publish --access public
---provenance`, and creates a GitHub Release with generated notes.
+The workflow runs as two jobs. `build` runs `install → build → lint (gated) →
+type-check → test`, verifies `package.json` matches the tag, and packs the
+tarball — with a read-only token and no publish credentials, so dependency
+install scripts never see `NPM_TOKEN`. `publish` downloads that tarball, runs
+`npm publish <tarball> --access public --provenance --ignore-scripts`, and
+creates a GitHub Release with generated notes.
+
+Because the tarball is published with `--ignore-scripts`, a `prepublishOnly`
+script in the consuming repo does not run in CI; everything it should guarantee
+has to be covered by the `build`, `type-check`, `test` and `lint` scripts.
 
 The consuming repo must expose `build`, `type-check`, `test`, and (if
 `run-lint`) `lint` scripts, and provide an `NPM_TOKEN` secret.

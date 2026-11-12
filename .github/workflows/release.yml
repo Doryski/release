@@ -14,14 +14,15 @@ on:
         required: true
 
 jobs:
-  release:
-    name: Build, test, and publish to npm
+  build:
+    name: Build, test, and pack
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      id-token: write # required for npm provenance
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
         with:
@@ -31,7 +32,6 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: pnpm
-          registry-url: "https://registry.npmjs.org/"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -65,10 +65,38 @@ jobs:
             exit 1
           fi
 
+      - name: Pack
+        run: npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/package"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: ${{ runner.temp }}/package/*.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # required for npm provenance
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: "https://registry.npmjs.org/"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: package
+          path: package
+
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public --provenance
+        run: npm publish ./package/*.tgz --access public --provenance --ignore-scripts
 
       - name: Create GitHub Release
         # Pinned to commit SHA of v2.6.2 (third-party action with contents: write).
